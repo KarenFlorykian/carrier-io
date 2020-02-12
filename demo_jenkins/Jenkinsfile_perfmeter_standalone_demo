@@ -32,7 +32,7 @@ node{
         }
     }
     stage("publish results") {
-        perfReport reports/*.jtl
+        perfReport 'reports/*.jtl'
         junit 'reports/*.xml'
     }
 }
