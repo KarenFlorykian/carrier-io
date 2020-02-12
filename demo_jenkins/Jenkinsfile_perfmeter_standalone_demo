@@ -11,18 +11,19 @@ node{
     stage("run tests") {
         def dockerParamsString = "--entrypoint=''"
         def params = [
-            "-t"
+            "-t",
+            "-e loki_host=http://${get_influx_host(env.JENKINS_URL)}",
+            "-e junit_report=True",
+            "-e tp=10",
+            "-e rt=500",
+            "-e er=5",
+            "-e \"loki_port=3100\" "
         ]
         for (param in params) {
             dockerParamsString += " ${param}"
         }
         docker.image("getcarrier/perfmeter:latest").inside(dockerParamsString){
-            sh "mkdir /tmp/reports"
-            sh "pwd"
             sh """cd / && ls -la &&  /launch.sh  -n -t /mnt/jmeter/FloodIO.jmx \\
-                  -j /tmp/reports/jmeter_${JOB_NAME}_${BUILD_ID}.log \\
-                  -l /tmp/reports/jmeter_${JOB_NAME}_${BUILD_ID}.jtl \\
-                  -e -o /tmp/reports/HtmlReport_${JOB_NAME}_${BUILD_ID} \\
                   -Jinflux.host="""+get_influx_host(env.JENKINS_URL)+""" \\
                   -JVUSERS=10 -JDURATION=120 -Jinflux.db=jmeter -Jinflux.port=8086 \\
                   -JRAMP_UP=1 -Jtest_name=test -Jbuild.id=flood_io_${JOB_NAME}_${BUILD_ID} \\
@@ -31,6 +32,7 @@ node{
         }
     }
     stage("publish results") {
-        perfReport 'reports/*.jtl'
+        perfReport reports/*.jtl
+        junit 'reports/*.xml'
     }
 }
